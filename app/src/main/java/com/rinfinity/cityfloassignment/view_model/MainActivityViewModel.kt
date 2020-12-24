@@ -8,6 +8,7 @@ import com.rinfinity.cityfloassignment.socket.MySocketListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.Exception
 
 class MainActivityViewModel(app: Application, private val mSocketListener: MySocketListener) :
@@ -16,31 +17,31 @@ class MainActivityViewModel(app: Application, private val mSocketListener: MySoc
     val socketConnectionStatus: LiveData<String> = mSocketListener.connectionStatus
     val transactionItemModel: LiveData<TransactionItemModel?> = mSocketListener.transactionItemModel
 
-    private val mRate = MutableLiveData<Double?>()
-    val rate: LiveData<Double?>
+    private val mRate = MutableLiveData<Double>()
+    val rate: LiveData<Double>
         get() = mRate
 
 
-
     fun getBitcoinUSDRates() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val url = "https://api.coindesk.com/v1/bpi/currentprice/USD.json"
-                val apiCall = async {
-                    getApplication<DemoApplication>().networkService.getBitcoinToUSDConversionRate(
-                        url
-                    )
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    val url = "https://api.coindesk.com/v1/bpi/currentprice/USD.json"
+                    val response =
+                        getApplication<DemoApplication>().networkService.getBitcoinToUSDConversionRate(
+                            url
+                        )
+
+                    val valueToPost: Double?
+                    valueToPost = if (response.isSuccessful && response.body() != null) {
+                        response.body()?.bpi?.usd?.rate_float
+                    } else {
+                        null
+                    }
+                    mRate.postValue(valueToPost)
+                } catch (e: Exception) {
+                    mRate.postValue(0.0)
                 }
-                val response = apiCall.await()
-                val valueToPost: Double?
-                valueToPost = if (response.isSuccessful && response.body() != null) {
-                    response.body()?.bpi?.usd?.rate_float
-                } else {
-                    null
-                }
-                mRate.postValue(valueToPost)
-            } catch (e: Exception) {
-                mRate.postValue(null)
             }
         }
 
@@ -49,12 +50,6 @@ class MainActivityViewModel(app: Application, private val mSocketListener: MySoc
     fun initSocketConnection() {
         mSocketListener.initSocket(mRate.value!!)
     }
-
-
-    fun shutDownSocket() {
-        mSocketListener.shutDownSocket()
-    }
-
 
     class MainActivityViewModelFactory(
         private val app: Application,
