@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">CityFloAssignment</string>
+    <string name="clear_list">Clear List</string>
+    <string name="error_msg">Oops Something Went Wrong</string>
+</resources>
